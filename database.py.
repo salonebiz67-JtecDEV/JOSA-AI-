@@ -1,0 +1,92 @@
+
+import sqlite3
+from datetime import datetime
+from config import DATABASE_PATH
+
+
+def get_connection():
+    connection = sqlite3.connect(DATABASE_PATH)
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def initialize_database():
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    # User profile
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS profile (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            display_name TEXT DEFAULT '',
+            ai_name TEXT DEFAULT 'JOSA',
+            bio TEXT DEFAULT '',
+            goals TEXT DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+
+    # Approved and suggested memories
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS memories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            status TEXT DEFAULT 'active',
+            approved INTEGER DEFAULT 0,
+            is_sensitive INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+
+    # Tasks and notes
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            completed INTEGER DEFAULT 0,
+            due_date TEXT DEFAULT '',
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+
+    # Default profile
+    now = datetime.utcnow().isoformat()
+
+    cursor.execute("""
+        INSERT OR IGNORE INTO profile
+        (id, ai_name, created_at, updated_at)
+        VALUES (1, 'JOSA', ?, ?)
+    """, (now, now))
+
+    connection.commit()
+    connection.close()
+
+
+def get_profile():
+    connection = get_connection()
+    profile = connection.execute(
+        "SELECT * FROM profile WHERE id = 1"
+    ).fetchone()
+    connection.close()
+
+    return dict(profile) if profile else None
+
+
+if __name__ == "__main__":
+    initialize_database()
+    print("JOSA database initialized successfully.")
